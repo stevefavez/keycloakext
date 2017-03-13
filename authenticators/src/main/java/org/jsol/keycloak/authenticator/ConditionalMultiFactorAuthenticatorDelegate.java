@@ -3,7 +3,6 @@ package org.jsol.keycloak.authenticator;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.spi.HttpRequest;
 import org.keycloak.authentication.AuthenticationFlowContext;
-import org.keycloak.authentication.AuthenticationFlowError;
 import org.keycloak.authentication.Authenticator;
 import org.keycloak.authentication.AuthenticatorFactory;
 import org.keycloak.models.KeycloakSession;
@@ -14,6 +13,7 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Predicate;
 
 /**
  *
@@ -28,8 +28,9 @@ import java.util.List;
 public class ConditionalMultiFactorAuthenticatorDelegate implements Authenticator {
 
     private final static Logger LOGGER = Logger.getLogger(ConditionalMultiFactorAuthenticatorDelegate.class) ;
-
+    /** template used to dispay second factor selector */
     public static final String SECONDFACTOR_AUTHENTICATOR_SELECTOR_FTL = "secondfactor-authenticator-selector.ftl";
+
     // store keycloak session in order to be able to create second factor authenticator
     private KeycloakSession keycloakSession ;
 
@@ -51,11 +52,14 @@ public class ConditionalMultiFactorAuthenticatorDelegate implements Authenticato
         } else {
             authenticationFlowContext.success();
         }
-
     }
 
+    /**
+     * ask the user to select a second authenticator factor - the one he can use (the ones that are configured for him)
+     * @param authenticationFlowContext
+     */
     private void showSecondFactorChoice(AuthenticationFlowContext authenticationFlowContext) {
-        final List<String> availableChoices = Arrays.asList("sms", "otp", "card");
+        final List<String> availableChoices = Arrays.asList("auth-otp-form", "empty");
         Response challenge = authenticationFlowContext.form().setAttribute("secondafoptions", availableChoices).createForm(SECONDFACTOR_AUTHENTICATOR_SELECTOR_FTL);
         authenticationFlowContext.challenge(challenge);
     }
@@ -63,23 +67,51 @@ public class ConditionalMultiFactorAuthenticatorDelegate implements Authenticato
     @Override
     public void action(AuthenticationFlowContext authenticationFlowContext) {
         MultivaluedMap<String, String> formData = authenticationFlowContext.getHttpRequest().getDecodedFormParameters();
-        if (formData.containsKey("cancel")) {
-            authenticationFlowContext.cancelLogin();
-            return;
-        }
-        String foundNote  = authenticationFlowContext.getClientSession().getNote( "selectedSystem" ) ;
-        if (foundNote == null) {
-            authenticationFlowContext.getClientSession().setNote("selectedSystem", "auth-otp-form");
-            AuthenticatorFactory factory = (AuthenticatorFactory) this.getKeycloakSession().getKeycloakSessionFactory().getProviderFactory(Authenticator.class, "auth-otp-form");
-            final Authenticator secondFactorAuthenticator = factory.create(getKeycloakSession());
-            secondFactorAuthenticator.authenticate(authenticationFlowContext);
+
+        //second af form selector.
+        if (formContainsKey("secondaf").test( formData ) ) {
+            System.out.println( "formContainsKey secondaf" );
+            if ( formContainsKey("login").test( formData ) ) {
+                //second factor selected
+                System.out.println( "formContainsKey login" );
+                showSecondFactorChallenge(authenticationFlowContext, formData.getFirst("secondaf")) ;
+            } else {
+                System.out.println( "formContainsKey cancel" );
+                //no selected, canceling login.
+                authenticationFlowContext.cancelLogin();
+            }
         } else {
-            System.out.println("note is :  " + foundNote) ;
-            AuthenticatorFactory factory = (AuthenticatorFactory) this.getKeycloakSession().getKeycloakSessionFactory().getProviderFactory(Authenticator.class, foundNote);
-            final Authenticator secondFactorAuthenticator = factory.create(getKeycloakSession());
-            secondFactorAuthenticator.action( authenticationFlowContext );
+            //case of the delegated second factor
+            String foundNote  = authenticationFlowContext.getClientSession().getNote( "selectedSystem" ) ;
+            System.out.println( "selection of 2fa " + foundNote );
+            //case one - user clicked ok
+            if ( formContainsKey("login").test( formData ) && (foundNote != null) ) {
+                System.out.println( "selection of 2fa - login" + foundNote );
+                AuthenticatorFactory factory = (AuthenticatorFactory) this.getKeycloakSession().getKeycloakSessionFactory().getProviderFactory(Authenticator.class, foundNote);
+                final Authenticator secondFactorAuthenticator = factory.create(getKeycloakSession());
+                secondFactorAuthenticator.action(authenticationFlowContext);
+            } else {
+                System.out.println( "selection of 2fa - cancel" + foundNote );
+                authenticationFlowContext.getClientSession().removeNote( "selectedSystem" );
+                showSecondFactorChoice( authenticationFlowContext ) ;
+            }
         }
 
+    }
+
+    private void showSecondFactorChallenge(AuthenticationFlowContext authenticationFlowContext, final String
+            a2FASystem) {
+
+        System.out.println( "showSecondFactorChallenge " +  a2FASystem);
+
+        if ( a2FASystem.equals("empty") ) {
+            authenticationFlowContext.success();
+        } else {
+            authenticationFlowContext.getClientSession().setNote("selectedSystem", a2FASystem);
+            AuthenticatorFactory factory = (AuthenticatorFactory) this.getKeycloakSession().getKeycloakSessionFactory().getProviderFactory(Authenticator.class, a2FASystem);
+            final Authenticator secondFactorAuthenticator = factory.create(getKeycloakSession());
+            secondFactorAuthenticator.authenticate(authenticationFlowContext);
+        }
 
     }
 
@@ -103,7 +135,20 @@ public class ConditionalMultiFactorAuthenticatorDelegate implements Authenticato
 
     }
 
+
+
     public KeycloakSession getKeycloakSession() {
         return keycloakSession;
     }
+
+
+    /**
+     * Predicate to ensure that  a form contains a given key
+     * @param aKey
+     * @return
+     */
+    static Predicate<MultivaluedMap<String, String>> formContainsKey(final String aKey ) {
+        return formData -> formData.containsKey(aKey) ? true :  false ;
+    }
+
 }
