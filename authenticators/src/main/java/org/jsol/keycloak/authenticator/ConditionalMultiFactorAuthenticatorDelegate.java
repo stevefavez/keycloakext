@@ -21,6 +21,8 @@ import java.util.function.Predicate;
  *      1. Allow to delegate 2FA to an existing second factor authenticator (exemple, ask for secret question, otp, sms...)
  *      2. Allow to be executed only according to some context values (for exemple, IP Range, etc...)
  *
+ * NB : this is a skeleton class... must be completed in the future
+ *
  * @author <a href="mailto:favez.steve@gmail.com">Steve Favez</a>
  *
  * http://blog.keycloak.org/2016/07/loading-providers-and-themes-from-maven.html
@@ -44,7 +46,7 @@ public class ConditionalMultiFactorAuthenticatorDelegate implements Authenticato
         final HttpRequest httpRequest = authenticationFlowContext.getHttpRequest();
         LOGGER.debug("trying to authenticate with a given httpRequest");
 
-        boolean secondfactorRequired = true ;
+        boolean secondfactorRequired = voteIf2FARequired( authenticationFlowContext, keycloakSession ) ; ;
 
         //if second factor authentication is required and ready, ask to choose the proper authenticator
         if( secondfactorRequired ) {
@@ -54,11 +56,19 @@ public class ConditionalMultiFactorAuthenticatorDelegate implements Authenticato
         }
     }
 
+    private boolean voteIf2FARequired(AuthenticationFlowContext authenticationFlowContext, KeycloakSession keycloakSession) {
+        //TODO : implements rules to vote if 2FA is required - now return true for testing purpose
+        return true ;
+    }
+
     /**
      * ask the user to select a second authenticator factor - the one he can use (the ones that are configured for him)
      * @param authenticationFlowContext
      */
     private void showSecondFactorChoice(AuthenticationFlowContext authenticationFlowContext) {
+        /**TODO  : the list must be based on both authenticator configuration and for each 2fa authenticator, check
+        if the 2FA is configured for the current user. IE if auth-otp-form is available, it means
+        that current user has a valid otp configurtion for this realm */
         final List<String> availableChoices = Arrays.asList("auth-otp-form", "empty");
         Response challenge = authenticationFlowContext.form().setAttribute("secondafoptions", availableChoices).createForm(SECONDFACTOR_AUTHENTICATOR_SELECTOR_FTL);
         authenticationFlowContext.challenge(challenge);
@@ -70,28 +80,22 @@ public class ConditionalMultiFactorAuthenticatorDelegate implements Authenticato
 
         //second af form selector.
         if (formContainsKey("secondaf").test( formData ) ) {
-            System.out.println( "formContainsKey secondaf" );
             if ( formContainsKey("login").test( formData ) ) {
                 //second factor selected
-                System.out.println( "formContainsKey login" );
                 showSecondFactorChallenge(authenticationFlowContext, formData.getFirst("secondaf")) ;
             } else {
-                System.out.println( "formContainsKey cancel" );
                 //no selected, canceling login.
                 authenticationFlowContext.cancelLogin();
             }
         } else {
             //case of the delegated second factor
             String foundNote  = authenticationFlowContext.getClientSession().getNote( "selectedSystem" ) ;
-            System.out.println( "selection of 2fa " + foundNote );
             //case one - user clicked ok
             if ( formContainsKey("login").test( formData ) && (foundNote != null) ) {
-                System.out.println( "selection of 2fa - login" + foundNote );
                 AuthenticatorFactory factory = (AuthenticatorFactory) this.getKeycloakSession().getKeycloakSessionFactory().getProviderFactory(Authenticator.class, foundNote);
                 final Authenticator secondFactorAuthenticator = factory.create(getKeycloakSession());
                 secondFactorAuthenticator.action(authenticationFlowContext);
             } else {
-                System.out.println( "selection of 2fa - cancel" + foundNote );
                 authenticationFlowContext.getClientSession().removeNote( "selectedSystem" );
                 showSecondFactorChoice( authenticationFlowContext ) ;
             }
@@ -101,9 +105,6 @@ public class ConditionalMultiFactorAuthenticatorDelegate implements Authenticato
 
     private void showSecondFactorChallenge(AuthenticationFlowContext authenticationFlowContext, final String
             a2FASystem) {
-
-        System.out.println( "showSecondFactorChallenge " +  a2FASystem);
-
         if ( a2FASystem.equals("empty") ) {
             authenticationFlowContext.success();
         } else {
