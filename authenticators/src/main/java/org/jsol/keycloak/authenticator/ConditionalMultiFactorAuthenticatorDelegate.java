@@ -64,8 +64,7 @@ public class ConditionalMultiFactorAuthenticatorDelegate implements Authenticato
     }
 
     private boolean voteIf2FARequired(AuthenticationFlowContext authenticationFlowContext, KeycloakSession keycloakSession) {
-        //TODO : implements rules to vote if 2FA is required - now return true for testing purpose
-        return true;
+        return SecondFaVoter.voteFor2FARequired( authenticationFlowContext, keycloakSession ) ;
     }
 
     /**

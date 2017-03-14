@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
+import static org.keycloak.authentication.authenticators.browser.ConditionalOtpFormAuthenticator.DEFAULT_OTP_OUTCOME;
+import static org.keycloak.authentication.authenticators.browser.ConditionalOtpFormAuthenticator.FORCE;
+import static org.keycloak.authentication.authenticators.browser.ConditionalOtpFormAuthenticator.SKIP;
 import static org.keycloak.provider.ProviderConfigProperty.*;
 
 /**
@@ -30,6 +33,7 @@ public class ConditionalMultiFactorAuthenticatorDelegateFactory implements Authe
     public static final String SECOND_FACTOR_AUTHENTICATOR_LIST_ATTRIBUTE = "secondFactorAuthenticatorList";
     public static final String SKIP_SECONDAF_IPRANGES = "skipSecondAFIpRanges";
     public static final String FORCE_SECONDAF_IPRANGES = "forceSecondIpRanges";
+    public static final String DEFAULT_2FA_OUTCOME = "defaultsFAOutcome";
 
 
     private KeycloakSessionFactory keycloakSessionFactory ;
@@ -106,17 +110,23 @@ public class ConditionalMultiFactorAuthenticatorDelegateFactory implements Authe
         ProviderConfigProperty skip2FAIpRanges = new ProviderConfigProperty();
         skip2FAIpRanges.setType(ProviderConfigProperty.STRING_TYPE);
         skip2FAIpRanges.setName(SKIP_SECONDAF_IPRANGES);
-        skip2FAIpRanges.setLabel("Skip Second Factor Authenticator for IP in Ranges");
-        skip2FAIpRanges.setHelpText("Second Factor Authenticator is always skipped if client IP is in this ranges.");
+        skip2FAIpRanges.setLabel("Skip Second Factor Authenticator for IP in Ranges - comma separated CIDR notation");
+        skip2FAIpRanges.setHelpText("Second Factor Authenticator is always skipped if client IP is in this ranges.  - comma separated CIDR notation");
 
         ProviderConfigProperty force2FAIpRanges = new ProviderConfigProperty();
         force2FAIpRanges.setType(ProviderConfigProperty.STRING_TYPE);
         force2FAIpRanges.setName(FORCE_SECONDAF_IPRANGES);
-        force2FAIpRanges.setLabel("Force Second Factor Authenticator for IP in Ranges");
-        force2FAIpRanges.setHelpText("Second Factor Authenticator is always required if client IP is in this ranges.");
+        force2FAIpRanges.setLabel("Force Second Factor Authenticator for IP in Ranges - comma separated CIDR notation");
+        force2FAIpRanges.setHelpText("Second Factor Authenticator is always required if client IP is in this ranges. - comma separated CIDR notation");
 
+        ProviderConfigProperty defaultOutcome = new ProviderConfigProperty();
+        defaultOutcome.setType(LIST_TYPE);
+        defaultOutcome.setName(DEFAULT_OTP_OUTCOME);
+        defaultOutcome.setLabel("Fallback 2FA handling");
+        defaultOutcome.setOptions(asList(SKIP, FORCE));
+        defaultOutcome.setHelpText("What to do in case of every check abstains. Defaults to force 2FA authentication.");
 
-        return asList(availableSecondFactorAuthenticator, skip2FAIpRanges, force2FAIpRanges);
+        return asList(availableSecondFactorAuthenticator, skip2FAIpRanges, force2FAIpRanges, defaultOutcome);
     }
 
     private List<String> getAuthenticatorFactoryIds() {
