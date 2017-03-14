@@ -53,7 +53,6 @@ public class ConditionalMultiFactorAuthenticatorDelegateFactory implements Authe
 
     @Override
     public void init(Config.Scope config) {
-        System.out.println(" *******************  in init with config  **********************, " + config);
     }
 
     @Override

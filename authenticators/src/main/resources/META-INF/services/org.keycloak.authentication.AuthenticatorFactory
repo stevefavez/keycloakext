@@ -1,1 +1,2 @@
 org.jsol.keycloak.authenticator.ConditionalMultiFactorAuthenticatorDelegateFactory
+org.jsol.keycloak.authenticator.Fake2FAAuthenticatorFactory
