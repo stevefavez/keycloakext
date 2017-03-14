@@ -1,2 +1,4 @@
 org.jsol.keycloak.authenticator.ConditionalMultiFactorAuthenticatorDelegateFactory
 org.jsol.keycloak.authenticator.Fake2FAAuthenticatorFactory
+org.jsol.keycloak.authenticator.MatrixCardAuthenticatorFactory
+org.jsol.keycloak.authenticator.SMSAuthenticatorFactory

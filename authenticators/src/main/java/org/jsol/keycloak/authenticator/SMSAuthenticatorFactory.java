@@ -13,12 +13,12 @@ import java.util.List;
 /**
  * Created by Steve Favez on 14.03.2017.
  */
-public class Fake2FAAuthenticatorFactory implements AuthenticatorFactory {
+public class SMSAuthenticatorFactory implements AuthenticatorFactory {
 
-    public static final String PROVIDER_ID = "fake2faAuthenticator";
-    public static final String DISPLAY_TYPE = "Fake 2FA Authenticator";
+    public static final String PROVIDER_ID = "smsAuthenticator";
+    public static final String DISPLAY_TYPE = "SMS Authenticator";
     public static final String CATEGORY = "Custom 2FA Authenticator";
-    private static final String HELPTEXT = "FAKE 2FA Authenticator used to pass authentication without any question";
+    private static final String HELPTEXT = "Authenticator providing 2FA authentication through SMS";
 
     public static final AuthenticationExecutionModel.Requirement[] REQUIREMENT_CHOICES = {
             AuthenticationExecutionModel.Requirement.REQUIRED,
@@ -63,7 +63,7 @@ public class Fake2FAAuthenticatorFactory implements AuthenticatorFactory {
 
     @Override
     public Authenticator create(KeycloakSession keycloakSession) {
-        return new Fake2FAAuthenticator();
+        return new SMSAuthenticator() ;
     }
 
     @Override
@@ -85,4 +85,5 @@ public class Fake2FAAuthenticatorFactory implements AuthenticatorFactory {
     public String getId() {
         return PROVIDER_ID ;
     }
+
 }

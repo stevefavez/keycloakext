@@ -33,6 +33,10 @@ public class ConditionalMultiFactorAuthenticatorDelegate implements Authenticato
      * template used to dispay second factor selector
      */
     public static final String SECONDFACTOR_AUTHENTICATOR_SELECTOR_FTL = "secondfactor-authenticator-selector.ftl";
+    public static final String SECONDAF_FORM_KEY = "secondaf";
+    public static final String LOGIN_FORM_KEY = "login";
+    public static final String SELECTED_2FA_AUTHENTICATOR_NOTE_ATTRIBUTE = "selected.2fa.authenticator.note.attribute";
+    public static final String SECONDAFOPTIONS_FORM_ATTRIBUTE = "secondafoptions";
 
     // store keycloak session in order to be able to create second factor authenticator
     private KeycloakSession keycloakSession;
@@ -73,8 +77,8 @@ public class ConditionalMultiFactorAuthenticatorDelegate implements Authenticato
          if the 2FA is configured for the current user. IE if auth-otp-form is available, it means
          that current user has a valid otp configurtion for this realm */
 
-        final List<String> availableChoices = Arrays.asList("auth-otp-form", "fake2faAuthenticator");
-        Response challenge = authenticationFlowContext.form().setAttribute("secondafoptions", availableChoices).createForm(SECONDFACTOR_AUTHENTICATOR_SELECTOR_FTL);
+        final List<String> availableChoices = Arrays.asList("auth-otp-form", "smsAuthenticator", "matrixCardAuthenticator", "fake2faAuthenticator");
+        Response challenge = authenticationFlowContext.form().setAttribute(SECONDAFOPTIONS_FORM_ATTRIBUTE, availableChoices).createForm(SECONDFACTOR_AUTHENTICATOR_SELECTOR_FTL);
         authenticationFlowContext.challenge(challenge);
     }
 
@@ -83,24 +87,24 @@ public class ConditionalMultiFactorAuthenticatorDelegate implements Authenticato
         MultivaluedMap<String, String> formData = authenticationFlowContext.getHttpRequest().getDecodedFormParameters();
 
         //second af form selector.
-        if (formContainsKey("secondaf").test(formData)) {
-            if (formContainsKey("login").test(formData)) {
+        if (formContainsKey(SECONDAF_FORM_KEY).test(formData)) {
+            if (formContainsKey(LOGIN_FORM_KEY).test(formData)) {
                 //second factor selected
-                showSecondFactorChallenge(authenticationFlowContext, formData.getFirst("secondaf"));
+                showSecondFactorChallenge(authenticationFlowContext, formData.getFirst(SECONDAF_FORM_KEY));
             } else {
                 //no selected, canceling login.
                 authenticationFlowContext.cancelLogin();
             }
         } else {
             //case of the delegated second factor
-            String foundNote = authenticationFlowContext.getClientSession().getNote("selectedSystem");
+            String foundNote = authenticationFlowContext.getClientSession().getNote(SELECTED_2FA_AUTHENTICATOR_NOTE_ATTRIBUTE);
             //case one - user clicked ok
-            if (formContainsKey("login").test(formData) && (foundNote != null)) {
+            if (formContainsKey(LOGIN_FORM_KEY).test(formData) && (foundNote != null)) {
                 AuthenticatorFactory factory = (AuthenticatorFactory) this.getKeycloakSession().getKeycloakSessionFactory().getProviderFactory(Authenticator.class, foundNote);
                 final Authenticator secondFactorAuthenticator = factory.create(getKeycloakSession());
                 secondFactorAuthenticator.action(authenticationFlowContext);
             } else {
-                authenticationFlowContext.getClientSession().removeNote("selectedSystem");
+                authenticationFlowContext.getClientSession().removeNote(SELECTED_2FA_AUTHENTICATOR_NOTE_ATTRIBUTE);
                 showSecondFactorChoice(authenticationFlowContext);
             }
         }
@@ -109,7 +113,7 @@ public class ConditionalMultiFactorAuthenticatorDelegate implements Authenticato
 
     private void showSecondFactorChallenge(AuthenticationFlowContext authenticationFlowContext, final String
             a2FASystem) {
-        authenticationFlowContext.getClientSession().setNote("selectedSystem", a2FASystem);
+        authenticationFlowContext.getClientSession().setNote(SELECTED_2FA_AUTHENTICATOR_NOTE_ATTRIBUTE, a2FASystem);
         AuthenticatorFactory factory = (AuthenticatorFactory) this.getKeycloakSession().getKeycloakSessionFactory().getProviderFactory(Authenticator.class, a2FASystem);
         final Authenticator secondFactorAuthenticator = factory.create(getKeycloakSession());
         secondFactorAuthenticator.authenticate(authenticationFlowContext);
