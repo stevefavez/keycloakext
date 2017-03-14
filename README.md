@@ -19,6 +19,7 @@ The main goal of this keycloak authenticator project is to deliver the skeleton 
 
 ## Missing and open to any good idea
 1. Configuration : I was unable to display a multi value list (select available authenticator) - sounds like it's not part of the ftl template for config
+**_FOUND - NEED to modify kc-provider-config.html to support MultivalueList and MultivalueString_**
 2. Unable to create a configuration for an authenticator valid for the realm. (Imagine you'd like an SMS authenticator, it's not possible to create a configuration valid for the whole realm).
 3. Is it a good idea to implement it like that ? (for exemple, using the Note in order to keep the selected authenticator for the second factor)
 4. The "select" is really hugly, how to improve.
