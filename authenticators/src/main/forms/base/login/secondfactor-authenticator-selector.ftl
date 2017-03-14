@@ -13,7 +13,7 @@
 
             <div class="${properties.kcInputWrapperClass!}">
 
-                <select id="secondaf" name="secondaf">
+                <select id="secondaf" name="secondaf" class="form-control">
                     <#list secondafoptions as secondafoption>
                         <option value="${secondafoption}">${secondafoption}</option>
                     </#list>

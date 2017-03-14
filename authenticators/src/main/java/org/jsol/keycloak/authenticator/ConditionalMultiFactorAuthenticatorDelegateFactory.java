@@ -106,12 +106,10 @@ public class ConditionalMultiFactorAuthenticatorDelegateFactory implements Authe
     public List<ProviderConfigProperty> getConfigProperties() {
 
         ProviderConfigProperty availableSecondFactorAuthenticator = new ProviderConfigProperty() ;
-        availableSecondFactorAuthenticator.setType( ProviderConfigProperty.MULTIVALUED_STRING_TYPE );
+        availableSecondFactorAuthenticator.setType( ProviderConfigProperty.MULTIVALUED_LIST_TYPE );
         availableSecondFactorAuthenticator.setName(SECOND_FACTOR_AUTHENTICATOR_LIST_ATTRIBUTE);
         availableSecondFactorAuthenticator.setLabel("Available second factor authenticators");
         availableSecondFactorAuthenticator.setHelpText("List of Second Factor Authenticator available for the end user");
-        availableSecondFactorAuthenticator.setSecret(false);
-        availableSecondFactorAuthenticator.setDefaultValue(null);
         availableSecondFactorAuthenticator.setOptions(getAuthenticatorFactoryIds());
 
 
