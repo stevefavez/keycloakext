@@ -14,6 +14,7 @@ import javax.ws.rs.core.Response;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * This keycloak authenticator has two main functionality.
@@ -76,10 +77,23 @@ public class ConditionalMultiFactorAuthenticatorDelegate implements Authenticato
         /**TODO  : the list must be based on both authenticator configuration and for each 2fa authenticator, check
          if the 2FA is configured for the current user. IE if auth-otp-form is available, it means
          that current user has a valid otp configurtion for this realm */
+        final String available2FAAuthenticator = authenticationFlowContext.getAuthenticatorConfig().getConfig().get(ConditionalMultiFactorAuthenticatorDelegateFactory.SECOND_FACTOR_AUTHENTICATOR_LIST_ATTRIBUTE);
+        List<String> listOfavailable2FAAuthenticator = Arrays.asList(available2FAAuthenticator.split("\\s*,\\s*"));
+        if (listOfavailable2FAAuthenticator.size() == 0) {
+            //for test purpose, must be removed....
+            listOfavailable2FAAuthenticator = Arrays.asList("auth-otp-form", "smsAuthenticator", "matrixCardAuthenticator", "fake2faAuthenticator");
+        }
 
-        final List<String> availableChoices = Arrays.asList("auth-otp-form", "smsAuthenticator", "matrixCardAuthenticator", "fake2faAuthenticator");
-        Response challenge = authenticationFlowContext.form().setAttribute(SECONDAFOPTIONS_FORM_ATTRIBUTE, availableChoices).createForm(SECONDFACTOR_AUTHENTICATOR_SELECTOR_FTL);
+        List<String> filteredUserConfigured2FAAuthenticator = listOfavailable2FAAuthenticator.stream().filter( currentAuthenticator -> isAuthenticatorConfigured( currentAuthenticator, authenticationFlowContext ) ).collect(Collectors.toList()); ;
+
+        Response challenge = authenticationFlowContext.form().setAttribute(SECONDAFOPTIONS_FORM_ATTRIBUTE, filteredUserConfigured2FAAuthenticator).createForm(SECONDFACTOR_AUTHENTICATOR_SELECTOR_FTL);
         authenticationFlowContext.challenge(challenge);
+    }
+
+    private boolean isAuthenticatorConfigured(String currentAuthenticator, AuthenticationFlowContext authenticationFlowContext) {
+        AuthenticatorFactory factory = (AuthenticatorFactory) this.getKeycloakSession().getKeycloakSessionFactory().getProviderFactory(Authenticator.class, currentAuthenticator);
+        final Authenticator secondFactorAuthenticator = factory.create(getKeycloakSession());
+        return secondFactorAuthenticator.configuredFor(  keycloakSession, authenticationFlowContext.getRealm(), authenticationFlowContext.getUser() ) ;
     }
 
     @Override
